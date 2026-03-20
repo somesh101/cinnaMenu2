@@ -1,6 +1,6 @@
 {
     "uuid": "Cinnamenu@somesh",
-    "name": "Cinnamenu",
+    "name": "Sidebar App List",
     "description": "A Cinnamon menu with quick select, based on Cinnamenu by fredcw.",
     "max-instances": 2,
     "version": "5.4.14",
@@ -18,5 +18,5 @@
         "4.8"
     ],
     "author": "fredcw",
-    "last-edited": 1774017487
+    "last-edited": 1774018521
 }

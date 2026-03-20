@@ -116,6 +116,9 @@ class CinnamenuApplet extends TextIconApplet {
                                                 });
         this.signals.connect(this.appFavorites, 'changed', () => {
                         if (this.display) {// Check if display is initialised
+                            if (!this.useSeparateQuickSelectLists()) {
+                                this._refreshSidebar();
+                            }
                             if (this.currentCategory === 'favorite_apps' && !this.searchActive) {
                                 this.setActiveCategory(this.currentCategory);
                             }
@@ -197,6 +200,7 @@ class CinnamenuApplet extends TextIconApplet {
         { key: 'show-sidebar',              value: 'showSidebar',           cb: refreshDisplay},
         { key: 'sidebar-placement',         value: 'sidebarPlacement',      cb: refreshDisplay },
         { key: 'sidebar-favorites',         value: 'sidebarFavorites',      cb: refreshDisplay },
+        { key: 'quick-select-separate',     value: 'quickSelectSeparate',   cb: (...args) => this._onQuickSelectSeparateChange(...args) },
         
         { key: 'show-categories',           value: 'showCategories',        cb: refreshDisplay},
         { key: 'show-places-category',      value: 'showPlaces',            cb: null},
@@ -246,7 +250,7 @@ class CinnamenuApplet extends TextIconApplet {
             //This is a hidden config option.
             this.settings.searchStartFolder = GLib.get_home_dir();
         }
-        this._ensureQuickSelectItems();
+        this._onQuickSelectSeparateChange();
         this.recentApps = new RecentApps(this);
         this._onEnableRecentsChange();
         updateActivateOnHover();
@@ -408,6 +412,17 @@ class CinnamenuApplet extends TextIconApplet {
         }
     }
 
+    useSeparateQuickSelectLists() {
+        return !!this.settings.quickSelectSeparate;
+    }
+
+    _refreshSidebar() {
+        if (this.display) {
+            this.display.sidebar.populate();
+            this.display.updateMenuSize();
+        }
+    }
+
     _makeQuickSelectEntry(type, value) {
         return `${type}:${encodeURIComponent(value)}`;
     }
@@ -436,14 +451,14 @@ class CinnamenuApplet extends TextIconApplet {
 
     _setQuickSelectItems(items) {
         this.settings.quickSelectItems = items;
-        this._refreshQuickSelectSidebar();
+        this._refreshSidebar();
     }
 
-    _refreshQuickSelectSidebar() {
-        if (this.display) {
-            this.display.sidebar.populate();
-            this.display.updateMenuSize();
+    _onQuickSelectSeparateChange() {
+        if (this.useSeparateQuickSelectLists()) {
+            this._ensureQuickSelectItems();
         }
+        this._refreshSidebar();
     }
 
     _getQuickSelectKeyForItem(item) {
@@ -460,6 +475,9 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     _seedQuickSelectItems() {
+        if (!this.useSeparateQuickSelectLists()) {
+            return;
+        }
         const seededItems = [];
         const addUnique = (value) => {
             if (value && seededItems.indexOf(value) < 0) {
@@ -484,6 +502,9 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     _ensureQuickSelectItems() {
+        if (!this.useSeparateQuickSelectLists()) {
+            return;
+        }
         if (!this.settings.quickSelectMigrated) {
             if (this._getQuickSelectItems().length === 0) {
                 this._seedQuickSelectItems();
@@ -493,6 +514,17 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     addQuickSelectItemToPos(item, posItem) {
+        if (!this.useSeparateQuickSelectLists()) {
+            if (item && item.isApplication && item.id) {
+                const posId = posItem && posItem.isApplication ? posItem.id : null;
+                if (posId) {
+                    this.addFavoriteAppToPos(item.id, posId);
+                } else {
+                    this.appFavorites.addFavorite(item.id);
+                }
+            }
+            return;
+        }
         const itemKey = this._getQuickSelectKeyForItem(item);
         if (!itemKey) {
             return;
@@ -512,6 +544,10 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     addQuickSelectAppToPos(addId, posId) {
+        if (!this.useSeparateQuickSelectLists()) {
+            this.addFavoriteAppToPos(addId, posId);
+            return;
+        }
         const itemKey = this._makeQuickSelectEntry(QUICK_SELECT_PREFIX_APP, addId);
         const items = this._getQuickSelectItems().slice().filter(entry => entry !== itemKey);
         let insertAt = items.length;
@@ -525,10 +561,26 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     addQuickSelectItem(item) {
+        if (!this.useSeparateQuickSelectLists()) {
+            if (item && item.isApplication && item.id) {
+                this.appFavorites.addFavorite(item.id);
+            } else if (item && item.isFavoriteFile && item.uri) {
+                XApp.Favorites.get_default().add(item.uri);
+            }
+            return;
+        }
         this.addQuickSelectItemToPos(item, null);
     }
 
     removeQuickSelectItem(item) {
+        if (!this.useSeparateQuickSelectLists()) {
+            if (item && item.isApplication && item.id) {
+                this.appFavorites.removeFavorite(item.id);
+            } else if (item && item.isFavoriteFile && item.uri) {
+                XApp.Favorites.get_default().remove(item.uri);
+            }
+            return;
+        }
         const itemKey = this._getQuickSelectKeyForItem(item);
         if (!itemKey) {
             return;
@@ -538,6 +590,18 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     isQuickSelectItem(item) {
+        if (!this.useSeparateQuickSelectLists()) {
+            if (!item) {
+                return false;
+            }
+            if (item.isApplication && item.id) {
+                return this.appFavorites.isFavorite(item.id);
+            }
+            if ((item.isFavoriteFile || item.isFolderviewFile || item.isRecentFile) && item.uri) {
+                return XApp.Favorites.get_default().find_by_uri(item.uri);
+            }
+            return false;
+        }
         const itemKey = this._getQuickSelectKeyForItem(item);
         return !!itemKey && this._getQuickSelectItems().indexOf(itemKey) >= 0;
     }
@@ -1699,6 +1763,17 @@ class CinnamenuApplet extends TextIconApplet {
     }
 
     listQuickSelectItems() {
+        if (!this.useSeparateQuickSelectLists()) {
+            const res = [];
+            if (this.settings.sidebarFavorites === 1 || this.settings.sidebarFavorites === 3) {
+                res.push(...this.listFavoriteApps());
+            }
+            if (this.settings.sidebarFavorites === 2 || this.settings.sidebarFavorites === 3) {
+                res.push(...this.listFavoriteFiles());
+            }
+            return res;
+        }
+
         const res = [];
         this._getQuickSelectItems().forEach(entry => {
             const parsed = this._parseQuickSelectEntry(entry);

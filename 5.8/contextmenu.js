@@ -295,17 +295,19 @@ class ContextMenu {
                                                 this.close(); } ));
         }
 
-        this.menu.addMenuItem(new PopupSeparatorMenuItem(this.appThis));
-        if (this.appThis.isQuickSelectItem(app)) {
-            addMenuItem( new ContextMenuItem(this.appThis, _('Remove from quick select'),
-                                            'starred',
-                                            () => { this.appThis.removeQuickSelectItem(app);
-                                                    this.close(); } ));
-        } else {
-            addMenuItem( new ContextMenuItem(this.appThis, _('Add to quick select'),
-                                            'non-starred',
-                                            () => { this.appThis.addQuickSelectItem(app);
-                                                    this.close(); } ));
+        if (this.appThis.useSeparateQuickSelectLists()) {
+            this.menu.addMenuItem(new PopupSeparatorMenuItem(this.appThis));
+            if (this.appThis.isQuickSelectItem(app)) {
+                addMenuItem( new ContextMenuItem(this.appThis, _('Remove from quick select'),
+                                                'starred',
+                                                () => { this.appThis.removeQuickSelectItem(app);
+                                                        this.close(); } ));
+            } else {
+                addMenuItem( new ContextMenuItem(this.appThis, _('Add to quick select'),
+                                                'non-starred',
+                                                () => { this.appThis.addQuickSelectItem(app);
+                                                        this.close(); } ));
+            }
         }
 
         //uninstall Mint only
@@ -389,21 +391,23 @@ class ContextMenu {
                     }));
         }
 
-        this.menu.addMenuItem(new PopupSeparatorMenuItem(this.appThis));
-        if (this.appThis.isQuickSelectItem(app)) {
-            addMenuItem( new ContextMenuItem(this.appThis, _('Remove from quick select'),
-                                                    'starred',
-                                                    () => { this.appThis.removeQuickSelectItem(app);
-                                                            updateAfterFavFileChange();
-                                                            this.close(); } ));
-        } else {
-            addMenuItem( new ContextMenuItem(this.appThis, _('Add to quick select'),
-                                            'non-starred',
-                    () => {
-                        this.appThis.addQuickSelectItem(app);
-                        updateAfterFavFileChange();
-                        this.close();
-                    }));
+        if (this.appThis.useSeparateQuickSelectLists()) {
+            this.menu.addMenuItem(new PopupSeparatorMenuItem(this.appThis));
+            if (this.appThis.isQuickSelectItem(app)) {
+                addMenuItem( new ContextMenuItem(this.appThis, _('Remove from quick select'),
+                                                        'starred',
+                                                        () => { this.appThis.removeQuickSelectItem(app);
+                                                                updateAfterFavFileChange();
+                                                                this.close(); } ));
+            } else {
+                addMenuItem( new ContextMenuItem(this.appThis, _('Add to quick select'),
+                                                'non-starred',
+                        () => {
+                            this.appThis.addQuickSelectItem(app);
+                            updateAfterFavFileChange();
+                            this.close();
+                        }));
+            }
         }
 
         //Add folder as category

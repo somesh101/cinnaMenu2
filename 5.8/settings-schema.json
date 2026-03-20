@@ -53,6 +53,7 @@
                 "applications-view-mode",
                 "show-sidebar",
                 "sidebar-placement",
+                "quick-select-separate",
                 "description-placement"
             ]
         },
@@ -218,6 +219,13 @@
             "Apps and files":3
         },
         "tooltip":"Show your favorite apps and file icons on the sidebar"
+    },
+    "quick-select-separate":{
+        "dependency":"show-sidebar",
+        "type":"switch",
+        "default":true,
+        "description":"Keep quick select separate",
+        "tooltip":"Keep quick select items separate from the favorites list"
     },
     "description-placement":{
         "type":"combobox",
